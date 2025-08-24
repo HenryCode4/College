@@ -35,6 +35,11 @@ namespace College.Data.Config
                     DOB = new DateTime(2006, 10, 12)
                 }
             });
+
+            builder.HasOne(n => n.Department)
+                .WithMany(c => c.Students)
+                .HasForeignKey(n => n.DepartmentId)
+                .HasConstraintName("FK_Students_Department");
         }
     }
 }
