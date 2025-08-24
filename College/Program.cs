@@ -1,4 +1,6 @@
+using College.Configurations;
 using College.Data;
+using College.Data.Repository;
 using CollegeApp.MyLogging;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -32,8 +34,11 @@ builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddAutoMapper(typeof(AutoMapperConfig));
 
 builder.Services.AddScoped<IMyLogger, LogToFile>();
+builder.Services.AddScoped<IStudentRepository, StudentRepository>();
+builder.Services.AddScoped(typeof(ICollegeRepository<>), typeof(CollegeRepository<>));
 
 var app = builder.Build();
 
