@@ -39,6 +39,53 @@ builder.Services.AddAutoMapper(typeof(AutoMapperConfig));
 builder.Services.AddScoped<IMyLogger, LogToFile>();
 builder.Services.AddScoped<IStudentRepository, StudentRepository>();
 builder.Services.AddScoped(typeof(ICollegeRepository<>), typeof(CollegeRepository<>));
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        //Allow all origins, all methods, all headers
+        policy.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+
+    //options.AddPolicy("AllowALl", policy =>
+    //{
+    //    //Allow all origins, all methods, all headers
+    //    policy.AllowAnyOrigin()
+    //           .AllowAnyMethod()
+    //           .AllowAnyHeader();
+    //});
+
+    options.AddPolicy("AllowOnlyLocalhost", policy =>
+    {
+        //Allow specific origin
+        policy.WithOrigins("http://localhost:4200")
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+
+    options.AddPolicy("AllowOnlyGoogle", policy =>
+    {
+        //Allow specific origin
+        policy.WithOrigins("https://google.com", "https://gmail.com", "https://drive.google.com")
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+
+    options.AddPolicy("AllowOnlyMicrosoft", policy =>
+    {
+        //Allow specific origin
+        policy.WithOrigins("https://outlook.com", "https://microsoft.com", "https://onedrive.google.com")
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+
+
+
+});
+
+
 
 var app = builder.Build();
 
@@ -51,8 +98,25 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseRouting();
+
+app.UseCors("AllowAll");
+
 app.UseAuthorization();
 
-app.MapControllers();
+
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapGet("api/testingendpoint",
+        context => context.Response.WriteAsync("Test Response"))
+        .RequireCors("AllowOnlyLocalhost");
+
+    endpoints.MapControllers()
+             .RequireCors("AllowAll");
+
+    endpoints.MapGet("api/testendpoint2",
+        context => context.Response.WriteAsync(builder.Configuration.GetValue<string>("JWTSecret")));
+
+});
 
 app.Run();
