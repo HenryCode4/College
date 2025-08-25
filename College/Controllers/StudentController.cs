@@ -2,11 +2,13 @@
 using College.Data;
 using College.Data.Repository;
 using College.Models;
+using CollegeApp.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 
 namespace College.Controllers
 {
@@ -21,12 +23,14 @@ namespace College.Controllers
         private readonly ILogger<StudentController> _logger;
         private readonly IMapper _mapper;
         private readonly IStudentRepository _studentRepository;
+        private APIResponse _apiResponse;
 
         public StudentController(ILogger<StudentController> logger, IMapper mapper, IStudentRepository studentRepository)
         {
             _logger = logger;
             _mapper = mapper;
             _studentRepository = studentRepository;
+            _apiResponse = new();
         }
 
         [HttpGet]
@@ -37,16 +41,30 @@ namespace College.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<IEnumerable<StudentDto>>> GetStudent()
+        public async Task<ActionResult<APIResponse>> GetStudent()
         {
-            _logger.LogInformation("GetStudent method called");
+            try
+            {
+                _logger.LogInformation("GetStudent method called");
 
-            var students = await _studentRepository.GetAllAsync();
+                var students = await _studentRepository.GetAllAsync();
 
-            var studentDtoData = _mapper.Map<List<StudentDto>>(students);
+                _apiResponse.Data = _mapper.Map<List<StudentDto>>(students);
+                _apiResponse.Status = true;
+                _apiResponse.StatusCode = HttpStatusCode.OK;
 
-            //Ok - 200
-            return Ok(studentDtoData);
+                //Ok - 200
+                return Ok(_apiResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetStudent method");
+                _apiResponse.Errors.Add(ex.Message);
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.InternalServerError;
+                return _apiResponse;
+            }
+
         }
 
         [HttpGet]
@@ -57,19 +75,33 @@ namespace College.Controllers
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<StudentDto>> GetStudentById(int id)
+        public async Task<ActionResult<APIResponse>> GetStudentById(int id)
         {
-            _logger.LogInformation("GetStudentById method called with id: {Id}", id);
-            if (id <= 0)
-                return BadRequest();
+            try
+            {
+                _logger.LogInformation("GetStudentById method called with id: {Id}", id);
+                if (id <= 0)
+                    return BadRequest();
 
-            var student = await _studentRepository.GetAsync(student => student.Id == id);
-            if (student == null)
-                return NotFound($"Student with this id {id} not found");
+                var student = await _studentRepository.GetAsync(student => student.Id == id);
+                if (student == null)
+                    return NotFound($"Student with this id {id} not found");
 
-            var studentDto = _mapper.Map<StudentDto>(student);
+                _apiResponse.Data = _mapper.Map<StudentDto>(student);
+                _apiResponse.Status = true;
+                _apiResponse.StatusCode = HttpStatusCode.OK;
 
-            return Ok(studentDto);
+                return Ok(_apiResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetStudentById method");
+                _apiResponse.Errors.Add(ex.Message);
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.InternalServerError;
+                return _apiResponse;
+            }
+            
         }
 
         [HttpGet]
@@ -80,19 +112,34 @@ namespace College.Controllers
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<StudentDto>> GetStudentByName(string name)
+        public async Task<ActionResult<APIResponse>> GetStudentByName(string name)
         {
-            _logger.LogInformation("GetStudentByName method called with name: {Name}", name);
-            if (string.IsNullOrEmpty(name))
-                return BadRequest();
+            try
+            {
+                _logger.LogInformation("GetStudentByName method called with name: {Name}", name);
+                if (string.IsNullOrEmpty(name))
+                    return BadRequest();
 
-            var student = await _studentRepository.GetAsync(student => student.StudentName.ToLower().Contains(name));
-            if (student == null)
-                return NotFound($"Student with this name {name} not found");
+                var student = await _studentRepository.GetAsync(student => student.StudentName.ToLower().Contains(name));
+                if (student == null)
+                    return NotFound($"Student with this name {name} not found");
 
-            var studentDto = _mapper.Map<StudentDto>(student);
+                _apiResponse.Data = _mapper.Map<StudentDto>(student);
+                _apiResponse.Status = true;
+                _apiResponse.StatusCode = HttpStatusCode.OK;
 
-            return Ok(studentDto);
+                return Ok(_apiResponse);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetStudentByName method");
+                _apiResponse.Errors.Add(ex.Message);
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.InternalServerError;
+                return _apiResponse;
+            }
+            
         }
 
         [HttpPost]
@@ -102,15 +149,32 @@ namespace College.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<StudentDto>> CreateStudent([FromBody] StudentDto model)
+        public async Task<ActionResult<APIResponse>> CreateStudent([FromBody] StudentDto dto)
         {
-            _logger.LogInformation("CreateStudent method called with model: {@Model}", model);
-            if (model == null)
-                return BadRequest();
-            Student student = _mapper.Map<Student>(model);
-            var studentAfterCreation = await _studentRepository.CreateAsync(student);
-            model.Id = studentAfterCreation.Id;
-            return CreatedAtRoute("GetStudentById", new { id = model.Id }, model);
+            try
+            {
+                 _logger.LogInformation("CreateStudent method called with model: {@Model}", dto);
+                if (dto == null)
+                    return BadRequest();
+                Student student = _mapper.Map<Student>(dto);
+                var studentAfterCreation = await _studentRepository.CreateAsync(student);
+                dto.Id = studentAfterCreation.Id;
+
+                _apiResponse.Data = dto;
+                _apiResponse.Status = true;
+                _apiResponse.StatusCode = HttpStatusCode.OK;
+
+                return CreatedAtRoute("GetStudentById", new { id = dto.Id }, _apiResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in CreateStudent method");
+                _apiResponse.Errors.Add(ex.Message);
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.InternalServerError;
+                return _apiResponse;
+            }
+           
         }
 
         [HttpPut]
@@ -121,22 +185,34 @@ namespace College.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<StudentDto>> UpdateStudentAsync([FromBody] StudentDto dto)
+        public async Task<ActionResult<APIResponse>> UpdateStudentAsync([FromBody] StudentDto dto)
         {
-            _logger.LogInformation("UpdateStudent method called with model: {@Model}", dto);
-            if (dto == null || dto.Id <= 0)
-                BadRequest();
+            try
+            {
+                _logger.LogInformation("UpdateStudent method called with model: {@Model}", dto);
+                if (dto == null || dto.Id <= 0)
+                    BadRequest();
 
-            var existingStudent = await _studentRepository.GetAsync(student => student.Id == dto.Id, true);
+                var existingStudent = await _studentRepository.GetAsync(student => student.Id == dto.Id, true);
 
-            if (existingStudent == null)
-                return NotFound();
+                if (existingStudent == null)
+                    return NotFound();
 
-            var newRecord = _mapper.Map<Student>(dto);
+                var newRecord = _mapper.Map<Student>(dto);
 
-            await _studentRepository.UpdateAsync(newRecord);
+                await _studentRepository.UpdateAsync(newRecord);
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in UpdateStudent method");
+                _apiResponse.Errors.Add(ex.Message);
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.InternalServerError;
+                return _apiResponse;
+            }
+            
 
         }
 
@@ -148,29 +224,41 @@ namespace College.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult> UpdateStudentPartialAsync(int id, [FromBody] JsonPatchDocument<StudentDto> patchDocument)
+        public async Task<ActionResult<APIResponse>> UpdateStudentPartialAsync(int id, [FromBody] JsonPatchDocument<StudentDto> patchDocument)
         {
-            _logger.LogInformation("UpdateStudentPartial method called with id: {Id} and patchDocument: {@PatchDocument}", id, patchDocument);
-            if (patchDocument == null || id <= 0)
-                BadRequest();
+            try
+            {
+                _logger.LogInformation("UpdateStudentPartial method called with id: {Id} and patchDocument: {@PatchDocument}", id, patchDocument);
+                if (patchDocument == null || id <= 0)
+                    BadRequest();
 
-            var existingStudent = await _studentRepository.GetAsync(student => student.Id == id, true);
+                var existingStudent = await _studentRepository.GetAsync(student => student.Id == id, true);
 
-            if (existingStudent == null)
-                return NotFound();
+                if (existingStudent == null)
+                    return NotFound();
 
-            var studentDto = _mapper.Map<StudentDto>(existingStudent);
+                var studentDto = _mapper.Map<StudentDto>(existingStudent);
 
-            patchDocument.ApplyTo(studentDto, ModelState);
+                patchDocument.ApplyTo(studentDto, ModelState);
 
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
 
-            existingStudent = _mapper.Map<Student>(studentDto);
+                existingStudent = _mapper.Map<Student>(studentDto);
 
-            await _studentRepository.UpdateAsync(existingStudent);
+                await _studentRepository.UpdateAsync(existingStudent);
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in UpdateStudentPartial method");
+                _apiResponse.Errors.Add(ex.Message);
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.InternalServerError;
+                return _apiResponse;
+            }
+           
 
         }
 
@@ -182,19 +270,34 @@ namespace College.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<bool>> DeleteStudentAsync(int id)
+        public async Task<ActionResult<APIResponse>> DeleteStudentAsync(int id)
         {
-            _logger.LogInformation("DeleteStudent method called with id: {Id}", id);
-            if (id <= 0)
-                return BadRequest();
+            try
+            {
+                _logger.LogInformation("DeleteStudent method called with id: {Id}", id);
+                if (id <= 0)
+                    return BadRequest();
 
-            var student = await _studentRepository.GetAsync(student => student.Id == id);
-            if (student == null)
-                return NotFound($"Student with this id {id} not found");
+                var student = await _studentRepository.GetAsync(student => student.Id == id);
+                if (student == null)
+                    return NotFound($"Student with this id {id} not found");
 
-            await _studentRepository.DeleteAsync(student);
+                await _studentRepository.DeleteAsync(student);
 
-            return Ok(true);
+                _apiResponse.Data = true;
+                _apiResponse.Status = true;
+                _apiResponse.StatusCode = HttpStatusCode.OK;
+                return Ok(_apiResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in DeleteStudent method");
+                _apiResponse.Errors.Add(ex.Message);
+                _apiResponse.Status = false;
+                _apiResponse.StatusCode = HttpStatusCode.InternalServerError;
+                return _apiResponse;
+            }
+            
         }
     }
 }

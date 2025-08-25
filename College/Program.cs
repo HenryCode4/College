@@ -120,6 +120,12 @@ builder.Services.AddCors(options =>
 var keyForGoogle = Encoding.ASCII.GetBytes(builder.Configuration.GetValue<string>("JWTSecretforGoogle"));
 var keyForMicrosoft = Encoding.ASCII.GetBytes(builder.Configuration.GetValue<string>("JWTSecretforMicrosoft"));
 var keyForLocal = Encoding.ASCII.GetBytes(builder.Configuration.GetValue<string>("JWTSecretforLocal"));
+string GoogleAudience = builder.Configuration.GetValue<string>("GoogleAudience");
+string MicrosoftAudience = builder.Configuration.GetValue<string>("MicrosoftAudience");
+string LocalAudience = builder.Configuration.GetValue<string>("LocalAudience");
+string GoogleIssuer = builder.Configuration.GetValue<string>("GoogleIssuer");
+string MicrosoftIssuer = builder.Configuration.GetValue<string>("MicrosoftIssuer");
+string LocalIssuer = builder.Configuration.GetValue<string>("LocalIssuer");
 
 //JWT Authentication Configuration 
 builder.Services.AddAuthentication(options =>
@@ -134,8 +140,11 @@ builder.Services.AddAuthentication(options =>
     {
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(keyForGoogle),
-        ValidateIssuer = false,
-        ValidateAudience = false,
+        ValidateIssuer = true,
+        ValidIssuer = GoogleIssuer,
+
+        ValidateAudience = true,
+        ValidAudience = GoogleAudience
     };
 }).AddJwtBearer("LoginForMocrosoftUSers", options =>
 {
@@ -145,8 +154,12 @@ builder.Services.AddAuthentication(options =>
     {
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(keyForMicrosoft),
-        ValidateIssuer = false,
-        ValidateAudience = false,
+
+        ValidateIssuer = true,
+        ValidIssuer = MicrosoftIssuer,
+
+        ValidateAudience = true,
+        ValidAudience = MicrosoftAudience
     };
 }).AddJwtBearer("LoginForLocalUSers", options =>
 {
@@ -156,8 +169,11 @@ builder.Services.AddAuthentication(options =>
     {
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(keyForLocal),
-        ValidateIssuer = false,
-        ValidateAudience = false,
+        ValidateIssuer = true,
+        ValidIssuer = LocalIssuer,
+
+        ValidateAudience = true,
+        ValidAudience = LocalAudience
     };
 });
 
