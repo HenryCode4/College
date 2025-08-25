@@ -1,4 +1,5 @@
 ﻿using CollegeApp.MyLogging;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,6 +7,7 @@ namespace College.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [EnableCors(PolicyName = "AllowOnlyGoogle")]
     public class DemoController : ControllerBase
     {
         private readonly IMyLogger _myLogger;
